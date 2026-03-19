@@ -24,9 +24,10 @@
     .typewriter-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000000; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.8s ease; overflow: hidden; }
     .typewriter-overlay.active { opacity: 1; pointer-events: all; }
     .typewriter-scroll { position: absolute; top: 4rem; left: 0; right: 0; padding: 0 2.5rem; }
-    .typewriter-text { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: clamp(1.05rem, 4.2vw, 1.3rem); line-height: 1.85; color: rgba(232,228,222,0.88); text-align: center; max-width: 320px; letter-spacing: 0.01em; margin: 0 auto; transition: opacity 2s ease; }
-    .typewriter-text.fade-out { opacity: 0; }
-    .she-smiled { font-weight: 600; font-style: italic; transition: opacity 2s ease; }
+    .typewriter-text { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: clamp(1.05rem, 4.2vw, 1.3rem); line-height: 1.85; color: rgba(232,228,222,0.88); text-align: center; max-width: 320px; letter-spacing: 0.01em; margin: 0 auto; }
+    .body-wrap { display: inline; opacity: 1; transition: opacity 2s ease; }
+    .body-wrap.fade-out { opacity: 0; }
+    .she-smiled { font-weight: 600; font-style: italic; opacity: 1; transition: opacity 2s ease; }
     .she-smiled.fade-out { opacity: 0; }
     .cursor { display: inline-block; width: 1px; height: 1.1em; background: rgba(232,228,222,0.7); margin-left: 2px; vertical-align: text-bottom; animation: blink 1s step-end infinite; }
     .cursor.done { animation: none; opacity: 0; }
@@ -50,12 +51,11 @@
   </div>
   <div class="typewriter-overlay" id="overlay">
     <div class="typewriter-scroll">
-      <p class="typewriter-text" id="twText"><span class="cursor"></span></p>
+      <p class="typewriter-text" id="twText"></p>
     </div>
   </div>
 
   <script>
-    // ── Ambient particles ──────────────────────────────────────
     var canvas = document.getElementById('particles');
     var ctx = canvas.getContext('2d');
     var W, H, ambientParticles;
@@ -87,7 +87,6 @@
     }
     drawAmbient();
 
-    // ── Breathing ──────────────────────────────────────────────
     var wrap = document.getElementById('illus');
     setTimeout(function() { wrap.classList.add('breathing'); breath(); }, 3800);
     var inhale = false;
@@ -98,13 +97,11 @@
       setTimeout(breath, inhale ? 3200+Math.random()*800 : 4500+Math.random()*1200);
     }
 
-    // ── Typewriter ─────────────────────────────────────────────
     var overlay = document.getElementById('overlay');
     var twText = document.getElementById('twText');
     var typing = false;
     var timeouts = [];
 
-    // Trigger on any click/tap anywhere
     document.addEventListener('click', trigger);
     document.addEventListener('touchend', function(e) { e.preventDefault(); trigger(); });
 
@@ -116,8 +113,15 @@
     function startTypewriter() {
       typing = true;
       overlay.classList.add('active');
-      twText.innerHTML = '<span class="cursor"></span>';
-      twText.style.opacity = '1';
+      twText.innerHTML = '';
+
+      // bodyWrap holds all the main text — fades out independently
+      var bodyWrap = document.createElement('span');
+      bodyWrap.className = 'body-wrap';
+      var bodyCursor = document.createElement('span');
+      bodyCursor.className = 'cursor';
+      bodyWrap.appendChild(bodyCursor);
+      twText.appendChild(bodyWrap);
 
       var passage = "The train flew by, hundreds of cars layering their wind into the storm, as he rolled away from the hurtling metal onto his back.\n\nDon\u2019t you think you should look after her.\n\nThe raindrops were hard. He couldn\u2019t open his eyes. The red curls cascaded to her shoulders. Rivulets of blood.\n\n";
       var finalLine = "She smiled.";
@@ -128,10 +132,10 @@
         if (i < chars.length) {
           var ch = chars[i];
           if (ch === '\n') {
-            twText.insertBefore(document.createElement('br'), twText.querySelector('.cursor'));
+            bodyWrap.insertBefore(document.createElement('br'), bodyWrap.querySelector('.cursor'));
             i++; timeouts.push(setTimeout(typeNext, 80));
           } else {
-            twText.insertBefore(document.createTextNode(ch), twText.querySelector('.cursor'));
+            bodyWrap.insertBefore(document.createTextNode(ch), bodyWrap.querySelector('.cursor'));
             i++;
             var delay = 28 + Math.random()*22;
             if (ch === '.' || ch === '?') delay = 320 + Math.random()*180;
@@ -139,8 +143,7 @@
             timeouts.push(setTimeout(typeNext, delay));
           }
         } else {
-          // Done — immediately type She smiled. with no pause
-          twText.querySelector('.cursor').classList.add('done');
+          bodyCursor.classList.add('done');
           typeFinalLine();
         }
       }
@@ -163,27 +166,12 @@
             timeouts.push(setTimeout(typeChar, 80 + Math.random()*40));
           } else {
             span.querySelector('.cursor').classList.add('done');
-            // Fade out everything except She smiled. after 2s
+            // After 2s fade out body text
             timeouts.push(setTimeout(function() {
-              // Fade out all nodes before the span
-              twText.style.transition = 'opacity 2s ease';
-              // Fade just the non-she-smiled content by wrapping opacity on twText
-              // and keeping she-smiled visible via its own opacity
-              var nodes = twText.childNodes;
-              for (var n = 0; n < nodes.length; n++) {
-                if (nodes[n] !== span) {
-                  if (nodes[n].style !== undefined) nodes[n].style.opacity = '0';
-                }
-              }
-              // Use a wrapper fade: fade twText but keep span
-              twText.style.color = 'rgba(232,228,222,0)';
-              span.style.color = 'rgba(232,228,222,0.88)';
-              span.style.transition = 'none';
-
-              // After 2s fade she smiled too
+              bodyWrap.classList.add('fade-out');
+              // After 2s more fade out she smiled
               timeouts.push(setTimeout(function() {
-                span.style.transition = 'opacity 2s ease, color 2s ease';
-                span.style.color = 'rgba(232,228,222,0)';
+                span.classList.add('fade-out');
                 timeouts.push(setTimeout(closeOverlay, 2000));
               }, 2000));
             }, 2000));
@@ -195,8 +183,6 @@
 
     function closeOverlay() {
       overlay.classList.remove('active');
-      twText.style.color = '';
-      twText.style.transition = '';
       timeouts.forEach(clearTimeout);
       timeouts = [];
       typing = false;
